@@ -3,20 +3,15 @@ README
 2D_Laminar_Analysis_Orientation
 Updated: 03/04/25
 
---------------------
 Dependencies 
 	requires custom scripts readV1Angles.m & readV2Angles.m 
 	requires circular statistics toolbox in MATLAB
 	Berens, P. (2009). CircStat: A MATLAB Toolbox for Circular Statistics. 
 	Journal of Statistical Software, 31(10), 1–21. https://doi.org/10.18637/jss.v031.i10
 	https://www.mathworks.com/matlabcentral/fileexchange/10676-circular-statistics-toolbox-directional-statistics
---------------------
 
---------------------
 Overview: This collection of code takes the measured orientations of all counted axons and runs a Rayleigh Test. The Rayleigh test is a statistical test commonly used to assess whether a set of circular data (e.g., angles, directions) is uniformly distributed or whether it exhibits a preferred direction (i.e., is unimodal). 
---------------------
 
---------------------
 Files
 
 readV1Angles.m: code that reads the Microsoft excel sheet that stores V1 orientation data into MATLAB. 'V1_Orientation_Data_Template.xlsx' reflects the exact formatting that the code is designed to read in, each row represents the information for a single counted axon, and is formatted as...
@@ -73,6 +68,6 @@ readV2Angles.m: code that reads the Microsoft excel sheet that stores V2 orienta
 
 
 Rayleigh_test_plotting: takes the measured orientations of all counted axons read into MATLAB by 'readV1angles.m' and 'readV2angles.m', runs a Rayleigh Test, and generates a polar plot of orientations. The Rayleigh test is a statistical test commonly used to assess whether a set of circular data (e.g., angles, directions) is uniformly distributed or whether it exhibits a preferred direction (i.e., is unimodal). 
---------------------
+
 
 

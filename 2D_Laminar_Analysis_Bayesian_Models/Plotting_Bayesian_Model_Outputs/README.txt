@@ -1,17 +1,13 @@
 README
 
---------------------
 Plotting_Bayesian_Model_Outputs
 Updated: 03/04/2025
 
 Dependencies:
 MATLAB 
 
---------------------
 Overview: The code in this directory plots posterior parameters outputted from Rstudio_Bayesian_Analysis.txt. Subdirectories are named after the figure in the manuscript for which they generate. 
---------------------
 
---------------------
 Functions and Directories 
 
 Functions

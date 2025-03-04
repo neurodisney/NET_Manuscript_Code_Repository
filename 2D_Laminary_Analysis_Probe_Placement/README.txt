@@ -4,12 +4,10 @@ README
 2D_Probe_Placement
 Updated: 2/28/25
 
---------------------
 Dependencies 
 Fiji, version 2.9.0
---------------------
 
---------------------
+
 Files
 
 IMAGEJ_Macro_Random_Location_Generator
@@ -18,8 +16,6 @@ can be added. For any given instance of two or more probes overlapping, a random
 
 IMAGEJ_Macro_Place_Probes
 Notes: ImageJ Macro saved as .txt file. Version not used in the published manuscript. Inputs pixel conversion factor, probe diamter, line thickness, and number of probes. Randomly places non-overlapping probes onto uploaded image 
-
---------------------
 
 Usage Notes
 
