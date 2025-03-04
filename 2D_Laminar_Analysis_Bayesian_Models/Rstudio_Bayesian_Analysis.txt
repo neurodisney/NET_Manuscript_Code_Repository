@@ -1,0 +1,239 @@
+setwd("your/directory/to/2D_Laminar_Data/and/Rstudio/files/goes/here")
+
+#load the data
+require("rstan")
+rstan_options(auto_write=TRUE)
+require("tidyverse")
+require("matrixStats")
+set.seed(12345)
+stan_seed = 12345
+
+dat <- read_csv("data/2D_Laminar_Data.csv")
+
+layer_names = levels(as.factor(dat$Layer))
+protein_names = levels(as.factor(dat$Immunolabeled_Protein))
+section_names = levels(as.factor(dat$Section_Identifier))
+
+# define qualitative prior data
+q_levels <- c('-', '+', '++', '+++', '++++')
+Nq <- length(q_levels)
+q <- data.frame(layer=layer_names, 
+                "DBH"=factor(c('+', '+', '++', '++', '+++', '+', '-', '+', '+'), levels=q_levels),
+                "5HT"=factor(c('+', '++', '+++', '+++', '++++', '+++', '+', '++', '+'), levels=q_levels))
+q <- q %>% rename(`5HT`=X5HT)
+
+sec2prot <- dat %>% select(Section_Identifier, Immunolabeled_Protein) %>% 
+  unique() %>% mutate(section=as.integer(as.factor(Section_Identifier)), 
+                      protein=as.integer(as.factor(Immunolabeled_Protein))) %>%
+  arrange(section) %>%
+  select(section, protein)
+
+require(knitr)
+require(kableExtra)
+kable(q)
+
+q_prior <- data.frame(layer=factor(rep(layer_names, times=2), 
+                                   levels=layer_names), 
+                      protein=factor(rep(c("DBH", "5HT"), each=length(layer_names)), 
+                                         levels=c("DBH", "5HT")),
+                      reported=c(q[['DBH']], q[['5HT']]),
+                      m=c(0.05, 0.05, 0, 0, 0, 0.05, 0.98, 0.05, 0.05,
+                          0.05, 0, 0, 0, 0, 0, 0.05, 0, 0.05),
+                      p=c(0.9, 0.9, 0.05, 0.05, 0, 0.9, 0.02, 0.9, 0.9,
+                          0.9, 0.05, 0, 0, 0, 0, 0.9, 0.05, 0.9),
+                      pp=c(0.05, 0.05, 0.9, 0.9, 0.05, 0.05, 0, 0.05, 0.05,
+                           0.05, 0.9, 0.05, 0.05, 0.0, 0.05,0.05, 0.9, 0.05),
+                      ppp=c(0, 0, 0.05, 0.05, 0.9, 0, 0, 0, 0, 
+                            0, 0.05, 0.9, 0.9, 0.02, 0.9, 0, 0.05, 0),
+                      pppp=c(0, 0, 0, 0, 0.05, 0, 0, 0, 0,
+                             0, 0, 0.05, 0.05, 0.98, 0.05, 0, 0, 0))  %>%
+  mutate(total=m + p + pp + ppp + pppp) %>%
+  rename(`-`=m, `+`=p, `++`=pp, `+++`=ppp, `++++`=pppp)
+
+Nqobs <- 15
+
+q_prior %>% kable(col.names=c("Layer", "Protein", "Reported", 
+                              "-", "+", "++", "+++", "++++", "Total"),
+                  caption="Prior confidence for qualitative ratings") %>%
+  add_header_above(c(" ", " ", " ", "Confidence"=5, " ")) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+
+# make the q prior into a matrix
+qmat <- q_prior %>% 
+  select(-c(reported, protein, layer, total)) %>% 
+  as.matrix() %>% t()
+dim(qmat) <- c(Nq, length(layer_names), 2)
+qmat <- aperm(qmat, c(2, 3, 1))
+rstan_data <- list(Nrows=dim(dat)[1], 
+                   Nlayers=length(unique(dat$Layer)),
+                   Nproteins=length(unique(dat$Immunolabeled_Protein)),
+                   Nsections=length(unique(dat$Section_Identifier)),
+                   layer=as.integer(as.factor(dat$Layer)),
+                   section=as.integer(as.factor(dat$Section_Identifier)),
+                   protein=as.integer(as.factor(dat$Immunolabeled_Protein)),
+                   count=dat$Count_Qr,
+                   R=dat$Probe_Number_R,
+                   q=qmat,
+                   Nq=Nq,
+                   Nqobs=Nqobs,
+                   sec2prot=sec2prot$protein
+                   )
+
+fit1 <- stan(
+  seed = stan_seed,
+  file = "model_1.stan",  # Stan program
+  data = rstan_data,      # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 8000,            # total number of iterations per chain
+  thin = 4,               # amount distance between successive samples in chain
+  cores = 4,              # number of cores (could use one per chain)
+  refresh = 0             # no progress shown
+  )
+
+fit2 <- stan(
+  seed = stan_seed,
+  file = "model_2.stan",  # Stan program
+  data = rstan_data,      # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 8000,            # total number of iterations per chain
+  thin = 4,               # amount distance between successive samples in chain
+  cores = 4,              # number of cores (could use one per chain)
+  refresh = 0             # no progress shown
+  )
+
+fit3 <- stan(
+  seed = stan_seed,
+  file = "model_3.stan",  # Stan program
+  data = rstan_data,      # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 8000,            # total number of iterations per chain
+  thin = 4,               # amount distance between successive samples in chain
+  cores = 4,              # number of cores (could use one per chain)
+  refresh = 0             # no progress shown
+  )
+
+fit4 <- stan(
+  seed = stan_seed,
+  file = "model_4.stan",  # Stan program
+  data = rstan_data,      # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 8000,            # total number of iterations per chain
+  thin = 4,               # amount distance between successive samples in chain
+  cores = 4,              # number of cores (could use one per chain)
+  refresh = 0             # no progress shown
+  )
+
+
+fit5 <- stan(
+  seed = stan_seed,
+  file = "model_5.stan",  # Stan program
+  data = rstan_data,      # named list of data
+  chains = 4,             # number of Markov chains
+  warmup = 1000,          # number of warmup iterations per chain
+  iter = 8000,            # total number of iterations per chain
+  thin = 4,               # amount distance between successive samples in chain
+  cores = 4,              # number of cores (could use one per chain)
+  refresh = 0             # no progress shown
+  )
+
+# plot log likelihoods
+
+lp1 <- rstan::extract(fit1, "lp__")$lp__
+lp2 <- rstan::extract(fit2, "lp__")$lp__
+lp3 <- rstan::extract(fit3, "lp__")$lp__
+lp4 <- rstan::extract(fit4, "lp__")$lp__
+lp5 <- rstan::extract(fit5, "lp__")$lp__
+
+lp_df <- data.frame('Model 1'=lp1, 'Model 2'=lp2, 'Model 3'=lp3, 'Model 4'=lp4, 'Model 5'=lp5) %>%
+  pivot_longer(cols=everything(), names_to="model", values_to="lp") %>%
+  mutate(model=factor(model, labels=c("Model 1", "Model 2", "Model 3", "Model 4", "Model 5")))
+
+lp_stats <- lp_df %>% group_by(model) %>%
+  summarize(low=quantile(lp, 0.05), med=median(lp), high=quantile(lp, 0.95))
+
+p <- ggplot(lp_df) + 
+  geom_violin(aes(x=model, y=lp), fill='gray') +
+  ylab("Log Likelihood (data given parameters)") +
+  xlab("Model") +
+  theme_bw()
+p
+
+#calculate which model is favored
+lp_marginal <- lp_df %>% group_by(model) %>%
+  summarise(lp=logSumExp(lp) - count(lp))
+
+log_prior <- log(c(1/5, 1/5, 1/5, 1/5, 1/5))
+
+lp_marginal$log_prior <- log_prior
+
+log_pD = logSumExp(lp_marginal$lp + lp_marginal$log_prior)
+
+lp_marginal$log_posterior <- lp_marginal$lp + lp_marginal$log_prior - log_pD
+
+names(lp_marginal) <- c("Model", "$\\log p(D \\vert \\mathcal{M})$", "$\\log p(\\mathcal{M})$", "$\\log p(\\mathcal{M} \\vert D)$")
+
+kable(lp_marginal)
+
+#plot alphas, betas and rhos
+rho <- rstan::extract(fit4, "rho")$rho 
+rho <- data.frame(rho=rho)
+
+p <- ggplot(rho %>% mutate(rho = log(rho))) + 
+  geom_histogram(aes(x=rho, after_stat(density)), bins=200) +
+  ylab("Probability") +
+  xlab("log(NET/DBH)") +
+  ggtitle(expression(paste("Model 4 posteriors: ", rho))) + 
+  theme_bw()
+p
+
+require("gghalves")
+beta <- rstan::extract(fit5, "beta")$beta 
+dimnames(beta) <- list(seq(dim(beta)[1]), protein_names, layer_names) 
+beta <- beta %>% 
+  data.frame() %>%
+  pivot_longer(cols=everything()) %>%
+  separate(name, into=c("protein", "layer"))
+
+p <- ggplot(beta) + 
+  geom_half_violin(aes(x=layer, y=value, split=protein, fill=protein), position="identity") +
+  ylab("Intensity") +
+  xlab("Layer") +
+  ggtitle(expression(paste("Model 5 posteriors: ", beta))) + 
+  theme_bw() +
+  theme (aspect.ratio=1) 
+p
+
+alpha <- rstan::extract(fit5, "alpha")$alpha 
+colnames(alpha) <- section_names 
+alpha <- alpha %>% 
+  data.frame() %>%
+  pivot_longer(cols=everything(), names_to=c("section")) %>%
+  mutate(sample=factor(section, levels=))
+
+alpha_stats <- alpha %>% group_by(section) %>%
+  summarize(low=quantile(value, 0.05), med=median(value), high=quantile(value, 0.95))
+
+
+p <- ggplot(alpha) + 
+  geom_violin(aes(x=section, y=value), fill='gray') +
+  scale_x_discrete(guide=guide_axis(angle=90)) +
+  coord_cartesian(ylim=c(0, 0.5)) +
+  ylab("Multiplier") +
+  xlab("Section") +
+  ggtitle(expression(paste("Model 5 posteriors: ", alpha))) + 
+  theme_bw()
+p
+
+b <- median(rho$rho)
+
+
+write.csv(rho, "your/savedir/V1rhos.csv")
+write.csv(alpha, "your/savedir/V1alphas.csv")
+write.csv(beta, "your/savedir/V1betas.csv")
+write.csv(lp_marginal, "your/savedir/lpMarginal.csv")
+write.csv(lp_df, "your/savedir/lps.csv")

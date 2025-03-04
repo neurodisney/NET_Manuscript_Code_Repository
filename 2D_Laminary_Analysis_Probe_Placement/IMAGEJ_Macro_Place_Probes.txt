@@ -1,0 +1,59 @@
+//IMAGEJ_MACRO_Place_Probes
+
+dotSize = 20; // Diameter of the sampling probe in micrometers (20 µm)
+lineThickness = 0.5; // Line thickness of the probe in micrometers (0.5 µm)
+radius = dotSize / 2;
+minDistance = dotSize; // Minimum distance between centers to avoid overlap
+width = getWidth();
+height = getHeight();
+
+// Get pixel size (in µm/pixel) from image calibration
+cal = getPixelSize(); // Returns array [pixelWidth, pixelHeight, unit]
+pixelWidth = cal[0];
+pixelHeight = cal[1];
+
+// Convert dot size and line thickness from micrometers to pixels
+dotSizePx = dotSize / pixelWidth;
+lineThicknessPx = lineThickness / pixelWidth;
+radiusPx = radius / pixelWidth;
+minDistancePx = minDistance / pixelWidth;
+
+numDots = 25; // Number of sampling probes
+positions = newArray();
+
+// Set line thickness
+setLineWidth(lineThicknessPx);
+
+// Function to check if a new point overlaps with existing points
+function isOverlapping(x, y, positions, minDistancePx) {
+    for (i = 0; i < positions.length; i += 2) {
+        x_existing = positions[i];
+        y_existing = positions[i+1];
+        dist = sqrt(pow(x - x_existing, 2) + pow(y - y_existing, 2));
+        if (dist < minDistancePx) {
+            return true; // Overlaps
+        }
+    }
+    return false; // Does not overlap
+}
+
+// Try placing non-overlapping circles (outlines only)
+for (i = 0; i < numDots; i++) {
+    attempt = 0;
+    do {
+        x = random() * (width - dotSizePx); // Ensure it fits within the image boundaries
+        y = random() * (height - dotSizePx);
+        attempt++;
+    } while (isOverlapping(x, y, positions, minDistancePx) && attempt < 1000);
+    
+    if (attempt < 1000) {
+        positions = Array.concat(positions, x, y); // Store the non-overlapping position
+        makeOval(x, y, dotSizePx, dotSizePx); // Create oval (probe outline)
+        run("Draw"); // Draw an unfilled circle (outline only)
+    } else {
+        print("Could not place all dots due to space limitations.");
+        break;
+    }
+}
+
+run("Select None"); // Deselect all

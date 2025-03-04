@@ -1,0 +1,16 @@
+//IMAGEJ_MACRO_Random_Location_Generator 
+
+//Probe placement 
+
+dotSize = 20;
+  width = getWidth();
+  height = getHeight();
+  for (i=0; i<25; i++) {
+      x = random()*width-dotSize/2;
+      y = random()*height-dotSize/2;
+      makeOval(x, y, dotSize, dotSize);
+      run("Fill");
+   }
+   run("Select None");
+
+//The number of dots placed can be changed on line 4 in the i<x term
